@@ -2,20 +2,25 @@
 (function() {
   var charts, columns, height, outer_height, outer_width, padding, width;
 
-  padding = 20;
+  padding = {
+    left: 40,
+    top: 20,
+    right: 0,
+    bottom: 20
+  };
 
   height = 300;
 
   width = 500;
 
-  outer_height = height + padding * 3;
+  outer_height = height + padding.top + padding.bottom;
 
-  outer_width = width + padding * 2;
+  outer_width = width + padding.left + padding.right;
 
   columns = [1, 2, 3, 4];
 
   charts = d3.select(".container").style("width", (outer_width * 2) + "px").append("svg").attr("width", outer_width * 2).attr("height", outer_height * 2).selectAll("g").data(columns).enter().append("g").attr("transform", function(d, i) {
-    return "translate(" + (i % 2 * outer_width + padding) + "," + (Math.floor(i / 2) * outer_height + padding) + ")";
+    return "translate(" + (i % 2 * outer_width + padding.left) + "," + (Math.floor(i / 2) * outer_height + padding.top) + ")";
   });
 
   d3.text("int.txt", function(e, original_data) {
@@ -26,11 +31,11 @@
       return e.split("\t");
     });
     return charts.each(function(i) {
-      var data, x, xAxis, y;
+      var data, x, xAxis, y, yAxis;
       data = original_data.map(function(e) {
-        return +e[i];
+        return +e[i] + 1;
       });
-      x = d3.scale.linear().domain(d3.extent(data)).range([0, width]);
+      x = d3.scale.log().base(2).domain(d3.extent(data)).range([0, width]);
       data = d3.layout.histogram().bins(x.ticks(10))(data).map(function(e) {
         return {
           x: e.x,
@@ -44,14 +49,18 @@
         })
       ]).range([height, 0]);
       xAxis = d3.svg.axis().scale(x).orient("bottom");
-      d3.select(this).selectAll("g").data(data).enter().append("g").attr("transform", function(d) {
-        return "translate(" + (x(d.x)) + "," + (y(d.y)) + ")";
-      }).append("rect").attr("x", 1).attr("width", function(d) {
+      yAxis = d3.svg.axis().scale(y).orient("left");
+      d3.select(this).selectAll("rect").data(data).enter().append("rect").attr("x", function(d) {
+        return x(d.x) + 1;
+      }).attr("y", function(d) {
+        return y(d.y);
+      }).attr("width", function(d) {
         return x(d.x + d.dx) - x(d.x) - 2;
       }).attr("height", function(d) {
         return height - y(d.y);
       });
-      return d3.select(this).append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
+      d3.select(this).append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
+      return d3.select(this).append("g").attr("class", "y axis").call(yAxis).append("text").attr("transform", "rotate(-90)").attr("y", 6).attr("dy", ".71em").attr("class", "label").text("Count");
     });
   });
 
